@@ -12,11 +12,11 @@ terraform {
     region  = "us-east-1"
     encrypt = true
   }
-  
+
   required_version = ">= 1.2.0"
 }
 
 provider "aws" {
   region  = var.aws_region
-  profile = "default"
+  profile = var.aws_profile
 }
