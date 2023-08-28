@@ -28,3 +28,9 @@ variable "backup_bucket_name" {
   default     = "hackup-gcc-data"
   description = "AWS S3 bucket to store AVRO backups for GCC"
 }
+
+variable "upload_csv_function_name" {
+    type = string
+    default = "gcc_upload_csv"
+    description = "AWS upload lambda function name"
+}
