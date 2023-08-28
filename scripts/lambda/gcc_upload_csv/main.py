@@ -14,7 +14,7 @@ def lambda_handler(event, context):
         filename = query_parameters.get('filename', 'uploaded_file')
         
         # Store the file in S3
-        bucket_name = 'raw-data-gcc'
+        bucket_name = 'raw-gcc-data'
         s3_client.put_object(
             Bucket=bucket_name,
             Key=filename,
