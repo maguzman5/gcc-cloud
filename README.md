@@ -3,10 +3,10 @@
 This repo should contain all the insfrastructure to build the GCC data pipelines in AWS. 
 
 ## To Do
-- Create S3 buckets for:
-    - Raw data
-    - Processed data
-    - Backups
+- ~~Create S3 buckets for:~~
+    - ~~Raw data~~
+    - ~~Processed data~~
+    - ~~Backups~~
 - Create API Gateway with:
     - `/upload` endpoint
     - `/backup` endpoint
