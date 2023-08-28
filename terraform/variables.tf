@@ -34,3 +34,9 @@ variable "upload_csv_function_name" {
     default = "gcc_upload_csv"
     description = "AWS upload lambda function name"
 }
+
+variable "api_name" {
+    type = string
+    default = "API_GCC"
+    description = "AWS REST API name in API Gateway"
+}
