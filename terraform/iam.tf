@@ -41,13 +41,17 @@ resource "aws_iam_role_policy" "gcc_upload_csv_policy" {
             "arn:aws:s3:::${aws_s3_bucket.raw_bucket.id}",
             "arn:aws:s3:::${aws_s3_bucket.raw_bucket.id}/*"
           ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
         }
       ]
     }
   )
 }
-
-# resource "aws_iam_role_policy_attachment" "gcc_upload_csv_attach" {
-#   role       = aws_iam_role.gcc_upload_csv_exec_role.name
-#   policy_arn = aws_iam_role_policy.gcc_upload_csv_policy.arn
-# }
