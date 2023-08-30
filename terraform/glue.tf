@@ -20,6 +20,8 @@ resource "aws_glue_job" "insert_job" {
     "--enable-continuous-cloudwatch-log" = "true",
     "--enable-glue-datacatalog"          = "true",
     "--enable-job-insights"              = "false",
+    "--additional-python-modules"          = "psycopg2-binary==2.9.7"
+    # "--extra-py-files"                   = "s3://${aws_s3_bucket.scripts_bucket.id}/deps/glue_deps.zip"
   }
 
   command {
@@ -27,7 +29,7 @@ resource "aws_glue_job" "insert_job" {
     python_version  = 3
   }
 
-  connections = ["historic-data-conn"]
+  connections = []
 
   tags = {
     project = "GCC"
