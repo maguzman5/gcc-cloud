@@ -47,6 +47,12 @@ variable "trigger_backup_function_name" {
   description = "AWS trigger backup lambda function name"
 }
 
+variable "trigger_restore_function_name" {
+  type        = string
+  default     = "gcc_trigger_restore"
+  description = "AWS trigger restore lambda function name"
+}
+
 variable "api_name" {
   type        = string
   default     = "API_GCC"
@@ -61,6 +67,11 @@ variable "insert_glue_job_name" {
 variable "backup_glue_job_name" {
   type    = string
   default = "gcc_backup_job"
+}
+
+variable "restore_glue_job_name" {
+  type    = string
+  default = "gcc_restore_job"
 }
 
 variable "cloudwatch_group_name" {
