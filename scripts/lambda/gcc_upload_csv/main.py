@@ -16,6 +16,9 @@ def split_rows(header, rows, n):
             current_rows = [header]
             file_number += 1
 
+    if not csv_list:
+        csv_list = [''.join(current_rows)]
+
     return csv_list
 
 def lambda_handler(event, context):
