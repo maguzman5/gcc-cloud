@@ -100,9 +100,9 @@ def load_frame_from_jdbc(
     )
 
 
-def get_null_dataframe(frame, null_columns):
+def get_null_dataframe(frame):
     # Get dataframe with null values to log
-    conditions = [col(column_name).isNull() for column_name in null_columns]
+    conditions = [col(c).isNull() for c in frame.columns]
 
     # Combine conditions using OR operator
     combined_condition = conditions[0]
@@ -115,7 +115,7 @@ def get_null_dataframe(frame, null_columns):
 
 
 args = getResolvedOptions(
-    sys.argv, ["JOB_NAME", "BUCKET_NAME", "OBJECT_NAME", "RUN_ID"]
+    sys.argv, ["JOB_NAME", "BUCKET_NAME", "OBJECT_KEY", "OBJECT_NAME", "RUN_ID"]
 )
 sc = SparkContext()
 glueContext = GlueContext(sc)
@@ -124,6 +124,7 @@ job = Job(glueContext)
 job.init(args["JOB_NAME"], args)
 
 bucket_name = args.get("BUCKET_NAME")
+object_key = args.get("OBJECT_KEY")
 object_name = args.get("OBJECT_NAME")
 run_id = args.get("RUN_ID")
 
@@ -140,70 +141,39 @@ schema = "employees_data"
 read_frame = glueContext.create_dynamic_frame.from_options(
     format_options={
         "quoteChar": '"',
-        "withHeader": False,
+        "withHeader": True,
         "separator": ",",
         "optimizePerformance": False,
     },
     connection_type="s3",
     format="csv",
-    connection_options={"paths": [f"s3://{bucket_name}/{object_name}.csv"]},
+    connection_options={"paths": [f"s3://{bucket_name}/{object_key}"]},
     transformation_ctx="reading_csv",
 )
 
-
-if object_name == "departments":
-    mappings = [
-        ("col0", "string", "id", "bigint"),
-        ("col1", "string", "department", "string"),
-    ]
-    null_columns = ["department"]
-elif object_name == "jobs":
-    mappings = [
-        ("col0", "string", "id", "bigint"),
-        ("col1", "string", "job", "string"),
-    ]
-    null_columns = ["job"]
-elif object_name == "hired_employees":
-    mappings = [
-        ("col0", "string", "id", "bigint"),
-        ("col1", "string", "name", "string"),
-        ("col2", "string", "datetime", "string"),
-        ("col3", "string", "department_id", "bigint"),
-        ("col4", "string", "job_id", "bigint"),
-    ]
-    null_columns = ["name", "datetime", "department_id", "job_id"]
-else:
-    sys.exit()
-
-# Script generated for node Change Schema
-proc_frame = ApplyMapping.apply(
-    frame=read_frame,
-    mappings=mappings,
-    transformation_ctx="schema_mapping",
-)
-
-proc_frame = proc_frame.toDF().withColumn("run", lit(run_id))
+proc_frame = read_frame.toDF().withColumn("run", lit(run_id))
+proc_frame.show(10)
 
 # Replace empty values with null in dataframe
 proc_frame = proc_frame.select(
     [when(col(c) == "", None).otherwise(col(c)).alias(c) for c in proc_frame.columns]
 )
 
-null_frame = get_null_dataframe(proc_frame, null_columns)
+null_frame = get_null_dataframe(proc_frame)
 null_frame.show(10)
 
 null_ids = null_frame.select("id").rdd.flatMap(lambda x: x).collect()
 print(f"List of IDs with any null value: {null_ids}")
 
 # Drop null fields for important columns
-proc_frame = proc_frame.na.drop(subset=null_columns)
+proc_frame = proc_frame.na.drop()
 
 # For hired_employees, check for job and departemnts not found in their corresponding tables
 if object_name == "hired_employees":
     proc_frame = proc_frame.withColumn(
         "datetime", to_timestamp("datetime", "yyyy-MM-dd'T'HH:mm:ssX")
     )
-    proc_frame = proc_frame.na.drop(subset=null_columns)
+    proc_frame = proc_frame.na.drop()
 
     # Read actual data from RDS to check for department and job IDs
     jdbc_url = f"jdbc:postgresql://{host}:{port}/{database}"
