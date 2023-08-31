@@ -8,10 +8,9 @@ from botocore.exceptions import ClientError
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
+from pyspark.sql.functions import lit
 from awsglue.context import GlueContext
 from awsglue.job import Job
-from awsglue import DynamicFrame
-from pyspark.sql.functions import to_timestamp, lit, col, when
 
 
 def get_db_secret():
@@ -105,14 +104,15 @@ schema = "employees_data"
 read_frame = glueContext.create_dynamic_frame.from_options(
     connection_type="s3",
     format="avro",
-    connection_options={"paths": [f"s3://backup-gcc-data/{object_name}"]},
+    connection_options={"paths": [f"s3://backup-gcc-data/{object_name}/run={run_id}"]},
     transformation_ctx="reading_avro",
 )
 
-read_frame.show(10)
+proc_frame = read_frame.toDF().withColumn("run", lit(run_id))
+proc_frame.show(10)
 
 # Write into PostgreSQL
-read_frame.rdd.coalesce(10).foreachPartition(
+proc_frame.rdd.coalesce(10).foreachPartition(
     lambda x: upsert_spark_dataframe(
         x, db_creds, database, schema, object_name
     )
