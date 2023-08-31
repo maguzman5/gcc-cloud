@@ -97,10 +97,57 @@ resource "aws_api_gateway_integration_response" "backupIntegrationResponse" {
   ]
 }
 
+# Restore
+
+resource "aws_api_gateway_resource" "restoreResource" {
+  rest_api_id = aws_api_gateway_rest_api.gcc_api.id
+  parent_id   = aws_api_gateway_rest_api.gcc_api.root_resource_id
+  path_part   = "restore"
+}
+
+resource "aws_api_gateway_method" "executeRestore" {
+  rest_api_id   = aws_api_gateway_rest_api.gcc_api.id
+  resource_id   = aws_api_gateway_resource.restoreResource.id
+  http_method   = "POST"
+  authorization = "AWS_IAM"
+}
+
+resource "aws_api_gateway_integration" "restoreIntegration" {
+  rest_api_id             = aws_api_gateway_rest_api.gcc_api.id
+  resource_id             = aws_api_gateway_resource.restoreResource.id
+  http_method             = aws_api_gateway_method.executeRestore.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.trigger_restore_lambda.invoke_arn
+}
+
+resource "aws_api_gateway_method_response" "restoreResponse" {
+  rest_api_id = aws_api_gateway_rest_api.gcc_api.id
+  resource_id = aws_api_gateway_resource.restoreResource.id
+  http_method = aws_api_gateway_method.executeRestore.http_method
+  status_code = "200"
+}
+
+resource "aws_api_gateway_integration_response" "restoreIntegrationResponse" {
+  rest_api_id = aws_api_gateway_rest_api.gcc_api.id
+  resource_id = aws_api_gateway_resource.restoreResource.id
+  http_method = aws_api_gateway_method.executeRestore.http_method
+  status_code = aws_api_gateway_method_response.restoreResponse.status_code
+
+
+  response_templates = {
+    "application/json" = jsonencode({ message = "Success" })
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.restoreIntegration
+  ]
+}
+
 # Deploy
 
 resource "aws_api_gateway_deployment" "deployUpload" {
-  depends_on  = [aws_api_gateway_integration.uploadIntegration, aws_api_gateway_integration.backupIntegration]
+  depends_on  = [aws_api_gateway_integration.uploadIntegration, aws_api_gateway_integration.backupIntegration, aws_api_gateway_integration.restoreIntegration]
   rest_api_id = aws_api_gateway_rest_api.gcc_api.id
   stage_name  = "dev"
 
@@ -112,6 +159,9 @@ resource "aws_api_gateway_deployment" "deployUpload" {
       aws_api_gateway_resource.backupResource,
       aws_api_gateway_method.executeBackup,
       aws_api_gateway_integration.backupIntegration,
+      aws_api_gateway_resource.restoreResource,
+      aws_api_gateway_method.executeRestore,
+      aws_api_gateway_integration.restoreIntegration,
     ]))
   }
 
