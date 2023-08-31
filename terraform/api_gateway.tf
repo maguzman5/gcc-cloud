@@ -44,6 +44,10 @@ resource "aws_api_gateway_integration_response" "uploadIntegrationResponse" {
   response_templates = {
     "application/json" = jsonencode({ message = "Success" })
   }
+
+  depends_on = [
+    aws_api_gateway_integration.uploadIntegration
+  ]
 }
 
 # Backup 
@@ -87,6 +91,10 @@ resource "aws_api_gateway_integration_response" "backupIntegrationResponse" {
   response_templates = {
     "application/json" = jsonencode({ message = "Success" })
   }
+
+  depends_on = [
+    aws_api_gateway_integration.backupIntegration
+  ]
 }
 
 # Deploy
