@@ -268,7 +268,7 @@ glueContext.write_dynamic_frame.from_options(
     frame=proc_frame_dnf,
     connection_type="s3",
     format="csv",
-    connection_options={"path": "s3://proc-gcc-data", "partitionKeys": ["run"]},
+    connection_options={"path": f"s3://proc-gcc-data/{object_name}", "partitionKeys": ["run"]},
     transformation_ctx="S3_proc_data",
 )
 
