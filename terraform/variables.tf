@@ -30,13 +30,24 @@ variable "backup_bucket_name" {
 }
 
 variable "upload_csv_function_name" {
-    type = string
-    default = "gcc_upload_csv"
-    description = "AWS upload lambda function name"
+  type        = string
+  default     = "gcc_upload_csv"
+  description = "AWS upload lambda function name"
+}
+
+variable "trigger_glue_function_name" {
+  type        = string
+  default     = "gcc_trigger_glue"
+  description = "AWS trigger glue lambda function name"
 }
 
 variable "api_name" {
-    type = string
-    default = "API_GCC"
-    description = "AWS REST API name in API Gateway"
+  type        = string
+  default     = "API_GCC"
+  description = "AWS REST API name in API Gateway"
+}
+
+variable "insert_glue_job_name" {
+  type    = string
+  default = "gcc_insert_job"
 }

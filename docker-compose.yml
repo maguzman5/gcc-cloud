@@ -1,0 +1,10 @@
+version: "4.18"
+services:
+  gcc-glue-jobs:
+    build: .
+    image: amazon/aws-glue-libs
+    volumes:
+      - .:/usr/src/app
+    entrypoint: /bin/bash
+    env_file:
+      - .docker.env
