@@ -35,3 +35,9 @@ terraform.rc
 
 # Ignore zip packages
 *.zip
+
+# Ignore extra deps
+scripts/deps/*_pkg
+
+# Ignore envs
+*.env

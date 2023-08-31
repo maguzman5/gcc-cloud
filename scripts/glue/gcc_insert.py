@@ -11,7 +11,7 @@ from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from awsglue import DynamicFrame
-from pyspark.sql.functions import to_timestamp, lit, col
+from pyspark.sql.functions import to_timestamp, lit, col, when
 
 
 def get_db_secret():
@@ -81,7 +81,9 @@ def upsert_spark_dataframe(partition, db_creds, database, schema, table):
     db_conn.close()
 
 
-def load_frame_from_jdbc(sparkObject, jdbc_url, user, password, engine, dbtable, schema):
+def load_frame_from_jdbc(
+    sparkObject, jdbc_url, user, password, engine, dbtable, schema
+):
     if engine == "postgresql":
         driver = "org.postgresql.Driver"
     else:
@@ -97,6 +99,7 @@ def load_frame_from_jdbc(sparkObject, jdbc_url, user, password, engine, dbtable,
         .load()
     )
 
+
 def get_null_dataframe(frame, null_columns):
     # Get dataframe with null values to log
     conditions = [col(column_name).isNull() for column_name in null_columns]
@@ -109,6 +112,7 @@ def get_null_dataframe(frame, null_columns):
     # Filter the DataFrame based on the combined condition
     null_frame = frame.filter(combined_condition)
     return null_frame
+
 
 args = getResolvedOptions(
     sys.argv, ["JOB_NAME", "BUCKET_NAME", "OBJECT_NAME", "RUN_ID"]
@@ -130,6 +134,7 @@ user = db_creds.get("username")
 password = db_creds.get("password")
 port = db_creds.get("port")
 database = "historic_data"
+schema = "employees_data"
 
 # Read csv
 read_frame = glueContext.create_dynamic_frame.from_options(
@@ -179,8 +184,16 @@ proc_frame = ApplyMapping.apply(
 
 proc_frame = proc_frame.toDF().withColumn("run", lit(run_id))
 
+# Replace empty values with null in dataframe
+proc_frame = proc_frame.select(
+    [when(col(c) == "", None).otherwise(col(c)).alias(c) for c in proc_frame.columns]
+)
+
 null_frame = get_null_dataframe(proc_frame, null_columns)
 null_frame.show(10)
+
+null_ids = null_frame.select("id").rdd.flatMap(lambda x: x).collect()
+print(f"List of IDs with any null value: {null_ids}")
 
 # Drop null fields for important columns
 proc_frame = proc_frame.na.drop(subset=null_columns)
@@ -201,7 +214,7 @@ if object_name == "hired_employees":
         password=password,
         engine="postgresql",
         dbtable="jobs",
-        schema="employees_data"
+        schema=schema,
     )
     df_actual_jobs = df_actual_jobs.withColumnRenamed("id", "job_id_actual").drop("run")
 
@@ -212,13 +225,17 @@ if object_name == "hired_employees":
         password=password,
         engine="postgresql",
         dbtable="departments",
-        schema="employees_data"
+        schema=schema,
     )
-    df_actual_departments = df_actual_departments.withColumnRenamed("id", "department_id_actual").drop("run")
+    df_actual_departments = df_actual_departments.withColumnRenamed(
+        "id", "department_id_actual"
+    ).drop("run")
 
     # No matching IDs dataframe
     no_match_jobs_df = proc_frame.join(
-        df_actual_jobs, proc_frame.job_id == df_actual_jobs.job_id_actual, how="left_anti"
+        df_actual_jobs,
+        proc_frame.job_id == df_actual_jobs.job_id_actual,
+        how="left_anti",
     )
     no_match_departments_df = proc_frame.join(
         df_actual_departments,
@@ -228,6 +245,9 @@ if object_name == "hired_employees":
     no_match_df = no_match_jobs_df.union(no_match_departments_df).dropDuplicates()
     no_match_df.show(10)
 
+    no_match_ids = no_match_df.select("id").rdd.flatMap(lambda x: x).collect()
+    print(f"List of IDs with no match department/job ID: {no_match_ids}")
+
     # Join with IDs to get only the hired employees with a valid department and job ID
     proc_frame = (
         proc_frame.join(
@@ -235,13 +255,18 @@ if object_name == "hired_employees":
             proc_frame.job_id == df_actual_jobs.job_id_actual,
             how="inner",
         )
-        .drop("job_id_actual").drop("job")
+        .drop("job_id_actual")
+        .drop("job")
     )
-    proc_frame = proc_frame.join(
-        df_actual_departments,
-        proc_frame.department_id == df_actual_departments.department_id_actual,
-        how="inner",
-    ).drop("department_id_actual").drop("department")
+    proc_frame = (
+        proc_frame.join(
+            df_actual_departments,
+            proc_frame.department_id == df_actual_departments.department_id_actual,
+            how="inner",
+        )
+        .drop("department_id_actual")
+        .drop("department")
+    )
 
     proc_frame.show(10)
 
@@ -257,7 +282,7 @@ connection_options = {
     "url": f"jdbc:postgresql://{host}:{port}/{database}",
     "user": user,
     "password": password,
-    "dbtable": "employees_data.runs",
+    "dbtable": f"{schema}.runs",
 }
 
 glueContext.write_dynamic_frame.from_options(
@@ -280,7 +305,7 @@ glueContext.write_dynamic_frame.from_options(
 # Write into PostgreSQL
 proc_frame.rdd.coalesce(10).foreachPartition(
     lambda x: upsert_spark_dataframe(
-        x, db_creds, database, "employees_data", object_name
+        x, db_creds, database, schema, object_name
     )
 )
 
