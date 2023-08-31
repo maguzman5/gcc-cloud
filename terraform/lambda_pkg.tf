@@ -15,3 +15,9 @@ data "archive_file" "gcc_trigger_backup_zip" {
   source_file = "../scripts/lambda/gcc_trigger_backup/main.py"
   output_path = "../scripts/lambda/gcc_trigger_backup/main.zip"
 }
+
+data "archive_file" "gcc_trigger_restore_zip" {
+  type        = "zip"
+  source_file = "../scripts/lambda/gcc_trigger_restore/main.py"
+  output_path = "../scripts/lambda/gcc_trigger_restore/main.zip"
+}
