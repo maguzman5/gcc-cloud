@@ -37,3 +37,38 @@ resource "aws_glue_job" "insert_job" {
   }
 }
 
+resource "aws_glue_job" "backup_job" {
+  name         = var.backup_glue_job_name
+  role_arn     = "arn:aws:iam::938070615203:role/AWSGlueServiceRole-GCC"
+  glue_version = "4.0"
+
+  worker_type       = "G.1X"
+  number_of_workers = 2
+
+  execution_property {
+    max_concurrent_runs = 2
+  }
+  default_arguments = {
+    "--OBJECT_NAME"                      = "",
+    "--RUN_ID"                           = "",
+    "--job-language"                     = "python",
+    "--job-bookmark-option"              = "job-bookmark-disable",
+    "--enable-spark-ui"                  = "true",
+    "--enable-metrics"                   = "true",
+    "--enable-continuous-cloudwatch-log" = "true",
+    "--enable-glue-datacatalog"          = "true",
+    "--enable-job-insights"              = "false"
+  }
+
+  command {
+    script_location = "s3://gcc-scripts-bucket/glue/gcc_backup.py"
+    python_version  = 3
+  }
+
+  connections = []
+
+  tags = {
+    project = "GCC"
+  }
+}
+

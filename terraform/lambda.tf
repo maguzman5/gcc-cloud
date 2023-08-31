@@ -13,7 +13,7 @@ resource "aws_lambda_function" "upload_csv_lambda" {
   }
 }
 
-resource "aws_lambda_permission" "apigw" {
+resource "aws_lambda_permission" "upload_apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = "${aws_lambda_function.upload_csv_lambda.function_name}"
@@ -35,6 +35,30 @@ resource "aws_lambda_function" "trigger_glue_lambda" {
   tags = {
     project = "GCC"
   }
+}
+
+resource "aws_lambda_function" "trigger_backup_lambda" {
+  function_name    = var.trigger_backup_function_name
+  filename         = data.archive_file.gcc_trigger_backup_zip.output_path
+  source_code_hash = data.archive_file.gcc_trigger_backup_zip.output_base64sha256
+
+  role       = aws_iam_role.gcc_trigger_backup_exec_role.arn
+  handler    = "main.lambda_handler"
+  runtime    = "python3.10"
+  depends_on = [data.archive_file.gcc_trigger_backup_zip]
+
+  tags = {
+    project = "GCC"
+  }
+}
+
+resource "aws_lambda_permission" "backup_apigw" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.trigger_backup_lambda.function_name}"
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.gcc_api.execution_arn}/*/*"
 }
 
 # resource "aws_s3_bucket_notification" "trigger_glue_notification" {

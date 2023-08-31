@@ -25,7 +25,7 @@ variable "proc_bucket_name" {
 
 variable "backup_bucket_name" {
   type        = string
-  default     = "hackup-gcc-data"
+  default     = "backup-gcc-data"
   description = "AWS S3 bucket to store AVRO backups for GCC"
 }
 
@@ -41,6 +41,12 @@ variable "trigger_glue_function_name" {
   description = "AWS trigger glue lambda function name"
 }
 
+variable "trigger_backup_function_name" {
+  type        = string
+  default     = "gcc_trigger_backup"
+  description = "AWS trigger backup lambda function name"
+}
+
 variable "api_name" {
   type        = string
   default     = "API_GCC"
@@ -50,4 +56,14 @@ variable "api_name" {
 variable "insert_glue_job_name" {
   type    = string
   default = "gcc_insert_job"
+}
+
+variable "backup_glue_job_name" {
+  type    = string
+  default = "gcc_backup_job"
+}
+
+variable "cloudwatch_group_name" {
+  type    = string
+  default = "gcc-runs"
 }
